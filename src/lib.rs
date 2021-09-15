@@ -28,9 +28,28 @@ where
         clock_freq: embedded_time::rate::Hertz,
         cd: C,
     ) -> Ws2812<P, C> {
+        let program = pio_proc::pio!(
+            32,
+            "
+            .side_set 1
+            .define public T1 2
+            .define public T2 5
+            .define public T3 3
+
+              set pindirs, 0  side 0 [0]
+            bitloop:
+            .wrap_target
+              out x, 1        side 0 [T3 - 1]
+              jmp !x do_zero  side 1 [T1 - 1]
+              jmp bitloop     side 0 [T2 - 1]
+            do_zero:
+              nop             side 0 [T2 - 1]
+            .wrap
+            "
+        );
         // prepare the PIO program
         let side_set = pio::SideSet::new(false, 1, false);
-        let mut a = pio::Assembler::<32>::new_with_side_set(side_set);
+        //let mut a = pio::Assembler::<32>::new_with_side_set(side_set);
 
         const T1: u8 = 2; // start bit
         const T2: u8 = 5; // data bit
@@ -38,30 +57,30 @@ where
         const CYCLES_PER_BIT: u32 = (T1 + T2 + T3) as u32;
         const FREQ: u32 = 800_000;
 
-        let mut wrap_target = a.label();
-        let mut wrap_source = a.label();
-        let mut do_zero = a.label();
-        // sets pin as Out
-        a.set_with_side_set(pio::SetDestination::PINDIRS, 1, 0);
-        a.bind(&mut wrap_target);
-        // Do stop bit
-        a.out_with_delay_and_side_set(pio::OutDestination::X, 1, T3 - 1, 0);
-        // Do start bit
-        a.jmp_with_delay_and_side_set(pio::JmpCondition::XIsZero, &mut do_zero, T1 - 1, 1);
-        // Do data bit = 1
-        a.jmp_with_delay_and_side_set(pio::JmpCondition::Always, &mut wrap_target, T2 - 1, 1);
-        a.bind(&mut do_zero);
-        // Pseudoinstruction: NOP
-        // Do data bit = 0
-        a.mov_with_delay_and_side_set(
-            pio::MovDestination::Y,
-            pio::MovOperation::None,
-            pio::MovSource::Y,
-            T2 - 2, // 1 extra cycle in the loop
-            0,
-        );
-        a.bind(&mut wrap_source);
-        let program = a.assemble_with_wrap(wrap_source, wrap_target);
+        //let mut wrap_target = a.label();
+        //let mut wrap_source = a.label();
+        //let mut do_zero = a.label();
+        //// sets pin as Out
+        //a.set_with_side_set(pio::SetDestination::PINDIRS, 1, 0);
+        //a.bind(&mut wrap_target);
+        //// Do stop bit
+        //a.out_with_delay_and_side_set(pio::OutDestination::X, 1, T3 - 1, 0);
+        //// Do start bit
+        //a.jmp_with_delay_and_side_set(pio::JmpCondition::XIsZero, &mut do_zero, T1 - 1, 1);
+        //// Do data bit = 1
+        //a.jmp_with_delay_and_side_set(pio::JmpCondition::Always, &mut wrap_target, T2 - 1, 1);
+        //a.bind(&mut do_zero);
+        //// Pseudoinstruction: NOP
+        //// Do data bit = 0
+        //a.mov_with_delay_and_side_set(
+        //    pio::MovDestination::Y,
+        //    pio::MovOperation::None,
+        //    pio::MovSource::Y,
+        //    T2 - 2, // 1 extra cycle in the loop
+        //    0,
+        //);
+        //a.bind(&mut wrap_source);
+        //let program = a.assemble_with_wrap(wrap_source, wrap_target);
 
         // setup the PIO
         let pio = rp2040_hal::pio::PIO::new(pio, resets);

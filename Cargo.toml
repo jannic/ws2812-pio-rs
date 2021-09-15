@@ -14,3 +14,4 @@ pio = { git = "https://github.com/rp-rs/pio-rs.git", branch = "main" }
 smart-leds-trait = "0.2.1"
 nb = "1.0.0"
 cortex-m = "0.7.3"
+pio-proc = { git = "https://github.com/rp-rs/pio-rs.git", branch = "main" }
